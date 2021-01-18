@@ -7,7 +7,7 @@ This project will provide a primer to using kubernetes (k8). You will:
 - deploy a local cluster using minikube
 - learn about kubernetes primitives
 - install common custom resources to enhance the capabilities of k8
-- play with other supporting tools
+- deploy an application into the cluster
 
 #### Pre-requisites
 
@@ -15,13 +15,14 @@ This project will provide a primer to using kubernetes (k8). You will:
 | -- | -- | -- | --|
 | Minikube | v1.16.0 | local k8 cluster | `brew install minikube` |
 | kubectl | v1.19.3 | cli to connect to k8 | `brew install kubectl` |
+| Docker | v3.10 | platform for containers | [Download](https://hub.docker.com/editions/community/docker-ce-desktop-mac/) |
 
 #### Managing the cluster
 For this section, you will rely on the command line using `kubectl`. This CLI tool stores its configuration in `~/.kube/config` using contexts. You can think of contexts as different clusters that the CLI can point to.
 
 | Command | Description |
 | -- | -- |
-| `minikube start` | Start the cluster |
+| `minikube start --driver=hyperkit` | Start the cluster (this project uses hyperkit to enable minikube's ingress addon) |
 | `minikube stop` | Stop the cluster |
 | `kubectl config get-contexts` | Returns the contexts that you have configured. There will a `*` next to the context that you are currently using. |
 | `kubectl config use-context <NAME>` | Switches to use the specificed context. In this project, it is `minikube` |
@@ -133,6 +134,8 @@ A service in k8 routes traffic to a destination.
     kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   13d
 ```
 
+Run a describe command on the service to get a sense of how it listens to traffic and forwards to endpoints inside the cluster. `kubectl describe kubernetes`.
+
 #### ConfigMaps
 
 A resource that allows you to store key-value pairs to inject environment variables to your pods. NOTE: you should not put sensitive information like passwords or api keys here. See the next section on Secrets.
@@ -165,10 +168,10 @@ A resource to store sensitive data that can be injected into a pod through a vol
 
 #### Exercise - First Deployment (1/4)
 
-First we will deploy an application that echos our input. There is a deployment resource definition included in this project.
+First, we will deploy an application that echos our request. 
 
 ```
-    > kubectl create deployment echoserver --image=k8s.gcr.io/echoserver:1.4 --port=8080
+    > kubectl create deployment echoserver --image=k8s.gcr.io/echoserver:1.4
 ```
 
 Here are some things you can try to test your knowledge:
@@ -179,17 +182,70 @@ Here are some things you can try to test your knowledge:
 
 #### Exercise - Expose the Deployment VIA Service (2/4)
 
-Now let's open the deployment so we can connect to it.
+Now let's expose the deployment so we can connect to it by creating a Service and an Ingress resource. 
+
+STEP 1) Turn on the ingress add-on for minikube (note: you cannot use docker driver for this):
+
+```
+    > minikube addons enable ingress
+```
+
+STEP 2) Create a Service of type NodePort that forwards traffic on port 8080:
 
 ```
     > kubectl expose deployment echoserver --type=NodePort --name=echo-service --port=8080
 ```
 
-Test your knowledge:
+STEP 3) Create an ingress resource to connect to the service. First create a file with the following ingress resource definition (ie, you can use `echo-server-ingress.yaml` in this project):
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-server-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: echo-server.info
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo-server
+                port:
+                  number: 8080
+```
+
+Apply the the Ingress resource on the cluster: 
+
+```
+    > kubectl apply -f echo-server-ingress.yaml`
+```
+
+STEP 4) View the ingress resource and try to connect to it via echo-server.info:
+
+``` 
+    > kubectl get svc
+
+    NAME              CLASS    HOSTS              ADDRESS        PORTS   AGE
+    example-ingress   <none>   echo-server.info   192.168.64.2   80      12m
+``` 
+
+STEP 5) Modify your `/etc/hosts` file to include an entry (replace IP with the ADDRESS found from command `kubectl get ingress`)
+
+```
+192.168.64.2 echo-server.info
+```
+
+NOTE: K8 Ingress uses the host headers to map the requests from ingress > service > node/pod/container. That is why accesing IP addresses will not work.
+
+STEP 6) Test your knowledge:
 
 1. Check the minikube IP with `minikube ip`
 1. Get the nodeport value from the service<details><summary>Answer</summary>`kubectl describe svc`</details>
-1. Run a `curl <minikube_ip>:<nodeport>`
 
 #### Exercise - SSH onto a node (3/4)
 
@@ -202,8 +258,8 @@ This technique is useful if you need to troubleshoot anything on the pod like ne
 #### Exercise - Cleanup (4/4)
 
 ```
-    > kubectl delete service echo-service
-    > kubectl delete deployment echoserver
+    > minikube stop
+    > mini delete
 ```
 
 #### APPENDIX: Tips & Tricks
@@ -213,8 +269,9 @@ This technique is useful if you need to troubleshoot anything on the pod like ne
 | Alias your kubectl with `k` | If you are using zsh - add `kubectl` to your plugins<br/> Or add alias to your `~/.bash_profile` - `alias k='kubectl'` |
 | Use the `-o wide` command to see more information | `k get po -A -o wide`<br/>`k get no -o wide` |
 | You can use short hand | Check the api resources `k api-resources` and you will see abbrev. So you can things like `k get rs -A` to get replicasets |
-| k9s | A vim style interface [alternative](https://github.com/derailed/k9s) |
-| Lens | A GUI interface [alternative](https://k8slens.dev/) |
+| Run a troubleshooting pod with a shell prompt | `run -i --tty --rm debug --image=busybox --restart=Never -- sh` |
+| Tool - k9s | A vim style interface [alternative](https://github.com/derailed/k9s) |
+| Tool - Lens | A GUI interface [alternative](https://k8slens.dev/) |
 
 #### Upcoming Advanced Topics
 
