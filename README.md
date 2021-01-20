@@ -18,7 +18,7 @@ This project will provide a primer to using kubernetes (k8). You will:
 | Docker | v3.10 | platform for containers | [Download](https://hub.docker.com/editions/community/docker-ce-desktop-mac/) |
 
 #### Managing the cluster
-For this section, you will rely on the command line using `kubectl`. This CLI tool stores its configuration in `~/.kube/config` using contexts. You can think of contexts as different clusters that the CLI can point to.
+For this section, you will rely on the command line using `kubectl`. This CLI tool stores its configuration in `~/.kube/config` using contexts. You can think of contexts as different clusters that the CLI can connect to.
 
 | Command | Description |
 | -- | -- |
@@ -31,11 +31,11 @@ For this section, you will rely on the command line using `kubectl`. This CLI to
 
 This section will walk through api resources in K8 and what they do. Because the number of types of resources is so high, we will focus on the basic ones that most developers will need to know. You can run `kubectl api-resources` to see all of them.
 ![K8 Primivites](./k8_basic_primitives.jpg)
-Also, of note is that in Kubernetes resources can be managed through kubectl to call the main API Controller and behind the scenes it follows the same conventions. The main verbs we will focus on are `get` and `describe`.
+Also, of note is that in Kubernetes resources can be managed through kubectl to call the cluster's API Controller and behind the scenes all resource objects follow the same conventions. The main verbs we will use to inspect these resources will be `get` and `describe`. (ie, `kubectl get <RESOURCE>` and `kubectl describe <RESOURCE>`)
 
 #### Namespaces
 
-The first concept we will introduce is namespaces. Namespaces in K8 are isolated from each other and don't know about each other except in very few instances (ie, k8 services). This is important to know because each resource we inspect below may need explicit namespace called out. 
+The first concept we will introduce is namespaces. Namespaces in K8 are isolated from each other and don't know about each other except in very few instances (ie, k8 services). This is important to know because each resource we inspect below may need explicit namespace called out. (ie, `kubectl get pods -n kube-system`)
 
 ``` 
     > kubectl get ns 
@@ -60,7 +60,7 @@ Nodes in K8 are the servers that everything is deployed on. In AWS terms, they w
 
 #### Deployments
 
-Next we go with deployments because it's the outer most (native) wrapper for an application that gets deployed to the cluster. 
+Next we go with deployments because it's the outer most (native k8) wrapper for an application that gets deployed to the cluster. 
 
 ```
     > kubectl get deployments -A
@@ -69,11 +69,11 @@ Next we go with deployments because it's the outer most (native) wrapper for an 
     kube-system   coredns   1/1     1            1           13d
 ```
 
-If you run the describe command `kubectl describe deployments coredns -n kube-system`, you can review the contents to get a sense of what it's doing. Check it out and look at `Replicas`, `Pod Template` to prime yourself for the next primitive.
+If you run the describe command `kubectl describe deployments coredns -n kube-system`, you can review the contents to get a sense of what it's doing. Check it out and look at `Replicas`, `Pod Template` to prime yourself for the next set of primitives.
 
 #### Replica Sets
 
-ReplicaSets control and guarantee the number of desired pods.
+ReplicaSets control and attempt to guarantee the number of desired pods.
 
 ```
     > kubectl get replicasets -A
@@ -82,11 +82,11 @@ ReplicaSets control and guarantee the number of desired pods.
     kube-system   coredns-74ff55c5b   1         1         1       13d
 ``` 
 
-Again, you can describe this replicaset (but note the name will differ on your system) `k describe replicasets coredns-74ff55c5b -n kube-system`.
+You can describe this replicaset (but note the name will differ on your system) `k describe replicasets coredns-74ff55c5b -n kube-system`.
 
 #### Pods
 
-The pod wraps the application container and resides on nodes.
+The pod wraps the application container and resides on the nodes.
 
 ```
     > kubectl get pods -A
@@ -103,10 +103,10 @@ This resource definition will be the most interesting to inspect `kubectl descri
 | Field | Description |
 | -- | -- |
 | IP | The IP address of this pod. Other pods will use this IP during CoreDNS service discovery |
-| Containers.coredns.Image ID | It's just docker! |
+| Containers.coredns.ImageID | It's just docker! |
 | Containers.coredns.Ports | The ports that this pod will be listening on |
 | Containers.coredns.Limits | The hard upper limits of cpu/memory for this pod |
-| Containers.coredns.Requests | The amount of cpu/memory that this pod would like so K8 knows which node to deploy (if available) |
+| Containers.coredns.Requests | The amount of cpu/memory that this pod would like so K8 knows which node to deploy (if resources are available) |
 | Containers.coredns.Liveness | Checks to see if a pod is alive or needs to be terminated and another pod to take its place |
 | Containers.coredns.Readiness | Checks to see when this pod is ready to accept traffic |
 
@@ -125,7 +125,7 @@ In this example, K8 deploys kube-proxy on every node to manage the network rules
 
 #### Services
 
-A service in k8 routes traffic to a destination. 
+A service in k8 routes internal traffic to a destination. 
 
 ```
     > kubectl get svc
@@ -247,7 +247,7 @@ STEP 6) Test your knowledge:
 1. Check the minikube IP with `minikube ip`
 1. Get the nodeport value from the service<details><summary>Answer</summary>`kubectl describe svc`</details>
 
-#### Exercise - SSH onto a node (3/4)
+#### Exercise - SSH onto a pod (3/4)
 
 This technique is useful if you need to troubleshoot anything on the pod like network connectivity.
 
