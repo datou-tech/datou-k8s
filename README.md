@@ -262,7 +262,15 @@ This technique is useful if you need to troubleshoot anything on the pod like ne
     > mini delete
 ```
 
-#### APPENDIX: Tips & Tricks
+#### APPENDIX A: OTHER IMPORTANT TERMS
+
+| Name | Description | 
+| -- | -- |
+| Metadata | Data that helps identify or describes the object |
+| Labels | Key/Value pairs used specifically for identifying and selecting the object. Reserved conditions for use by K8. |
+| Annotations | Key/Value pairs used for non-identifying data like those used by client libraries. No reserved conditions that would conflict with K8.  |
+
+#### APPENDIX B: Tips & Tricks
 
 | Name | Description |
 | -- | -- |
@@ -274,10 +282,4 @@ This technique is useful if you need to troubleshoot anything on the pod like ne
 | Tool - Lens | A GUI interface [alternative](https://k8slens.dev/) |
 
 #### Upcoming Advanced Topics
-
-- Using Helm
 - Horizontal Pod Autoscaler
-- Istio/Kiali
-- Prometheus/Grafana
-- Jaeger
-- Argo (Project, App, GH/GHCR)
